@@ -14,6 +14,7 @@ from .tvdescript import Parent, ChildsNum, FileName, Gtv
 
 def conftv(cls, childs = None, space = None):
     """Configure Childs with spaces limited from 1 to 10"""
+    
     if space and space <= 10:
         cls.childs = ChildsNum(childs, space)
     else:
@@ -30,6 +31,7 @@ class TreeView:
     of making TreeView text file. Because it will erase everything in the text file.
     """
     
+    __slots__ = '__weakref__', 
     filename = FileName()
     childs = ChildsNum(50, 4)
     parent = Parent()
@@ -45,7 +47,6 @@ class TreeView:
         self.parent = self.parent 
         self.childs = self.childs
 
-    
     def __len__(self):
         """Len of childs"""
 
@@ -451,6 +452,7 @@ class TreeView:
         This function can call back your previous data saved by backuptv() and 
         overwrite your existing one.
         """
+        
         try:
             dbs = db(filename)
             if os.path.exists(dbs.pname):
