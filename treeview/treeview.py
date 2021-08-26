@@ -10,10 +10,14 @@ from typing import Union
 from types import GeneratorType
 import locale
 from collections.abc import Iterator
-from .tvdescrpit import Parent, ChildsNum, FileName, Gtv
+from .tvdescript import Parent, ChildsNum, FileName, Gtv
 
 def conftv(cls, childs = None, space = None):
-    cls.childs = ChildsNum(childs, space)
+    """Configure Childs with spaces limited from 1 to 10"""
+    if space and space <= 10:
+        cls.childs = ChildsNum(childs, space)
+    else:
+        raise ValueError('Space is exceeding the limitation! (1 to 10 only)')
     return cls
 
 class TreeView:
@@ -26,7 +30,6 @@ class TreeView:
     of making TreeView text file. Because it will erase everything in the text file.
     """
     
-    __slots__ = '__weakref__'
     filename = FileName()
     childs = ChildsNum(50, 4)
     parent = Parent()
@@ -41,10 +44,11 @@ class TreeView:
         self.filename = filename
         self.parent = self.parent 
         self.childs = self.childs
+
     
     def __len__(self):
         """Len of childs"""
-        
+
         return len(tuple(self.childs))
             
     def __enter__(self):
@@ -58,24 +62,27 @@ class TreeView:
         if TreeView.filename.store1:
             TreeView.filename.finalize(self.__weakref__)
         return False
-    
+        
     def getdata(self) -> GeneratorType:
         """Get file datas"""
         
-        with open(f'{self.filename}.txt') as rd:
-            yield from rd
+        if os.path.exists(f'{self.filename}.txt'):
+            with open(f'{self.filename}.txt') as rd:
+                yield from enumerate(rd)
+        else:
+            raise FileNotFoundError(f'{self.filename}.txt not exist!')
     
     def getdatanum(self) -> int:
         """Len of data"""
         
-        return len(tuple(self.getdata()))
-
+        return tuple(self.getdata())[-1][0]+1
+        
     def filop(self, data: Union[str, list, GeneratorType, Iterator], mode: int = 0) -> None:
         """The file open function/method either for read or write."""
         
         try:
             if not mode:
-                if isinstance(data, (list, GeneratorType, Iterator)):
+                if isinstance(data, (GeneratorType, Iterator)):
                     with open(f'{self.filename}.txt', 'w') as wr:
                         for d in data:
                             wr.write(d)
@@ -121,9 +128,49 @@ class TreeView:
         except TypeError as e:
             raise e
                 
-    def gspc(self):
-        return tuple(islice(self.childs, 0, 1))[0][1]
+    def gspc(self, insider: bool = False):
+        """Finding spaces that set originally or default"""
+        
+        if insider:
+            try:
+                pos = None
+                for _, lsp in self.getdata():
+                    if lsp != '\n' and lsp[-2] != ':':
+                        pos = re.match(r'\s+', lsp).span()[1]
+                        if (pos:= [p for p in range(1,11) if p % pos == 0]):
+                            return pos[0]
+                        else:
+                            raise ValueError('No value found!')
+            except Exception as e:
+                raise e
+            finally:
+                del pos
+        else:
+            return tuple(islice(self.childs, 0, 1))[0][1]
     
+    def compdatch(self, sp: bool = False):
+        """Compose data to be written back to fileread"""
+        
+        try:
+            di = {}
+            if sp:
+                spc = self.gspc()
+            else:
+                spc = self.gspc(True)
+            for i, d  in self.getdata():
+                if d == '\n':
+                    di[i] = ('space', d)
+                elif re.match(r'\s+', d) == None:
+                    di[i] = (next(self.parent)[1], d)
+                else:
+                    pos = re.match(r'\s+', d).span()[1]
+                    idx = (pos // spc)
+                    di[i] = (tuple(islice(self.childs,idx - 1, idx))[0][0], 
+                             d[pos:])
+            return (di:= iter(di.values()) if di else None)
+        except Exception as e:
+            raise e
+        
     def insighttree(self) -> dict:
         """
         This is very useful for looking at your TreeView data,
@@ -132,14 +179,15 @@ class TreeView:
         
         try:
             di = {}
-            for i, d  in enumerate(self.getdata()):
+            spc = self.gspc()
+            for i, d  in self.getdata():
                 if d == '\n':
                     di[i] = ('space', d)
                 elif re.match(r'\s+', d) == None:
                     di[i] = (next(self.parent)[1], d)
                 else:
                     pos = re.match(r'\s+', d).span()[1]
-                    idx = (pos // self.gspc())
+                    idx = (pos // spc)
                     di[i] = (tuple(islice(self.childs,idx - 1, idx))[0][0], 
                              d[pos:])
             return (di:= iter(di.items()) if di else None)
@@ -154,14 +202,15 @@ class TreeView:
         try:
             if isinstance(data, Iterator):
                 di = {}
-                for i, d in enumerate(data):
+                spc = self.gspc()
+                for i, d in data:
                     if d == '\n':
                         di[i] = ('space', d)
                     elif re.match(r'\s+', d) == None:
                         di[i] = (next(self.parent)[1], d)
                     else:
                         pos = re.match(r'\s+', d).span()[1]
-                        idx = (pos // self.gspc())
+                        idx = (pos // spc)
                         di[i] = (tuple(islice(self.childs,idx - 1, idx))[0][0], 
                                  d[pos:])
                 return (di:= iter(di.items()) if di else None)
@@ -170,7 +219,7 @@ class TreeView:
         except Exception as e:
             raise e
         finally:
-            del data
+            del data, di, spc
             
     def quickchild(self, words: str, child: str ) -> None:
         """
@@ -201,7 +250,7 @@ class TreeView:
             if isinstance(words, str):
                 words = f'{" " * self.getchild(child)}-{words}\n' if child else f'{words}:\n'
                 if isinstance(row, int) and self.getdatanum()-1 >= row >= 0 :
-                    data = enumerate(tuple(self.getdata()))
+                    data = iter(tuple(self.getdata()))
                     self.filop(Gtv.editt(words, data, row))
                 else:
                     raise ValueError(f'"row" must be int number and less or equal to {d-1}!')
@@ -237,7 +286,7 @@ class TreeView:
             read = None
             if isinstance(row, int):
                 if row <= self.getdatanum() - 1:
-                    read = (d for i, d in enumerate(tuple(self.getdata())) if i != row)
+                    read = (d for i, d in iter(tuple(self.getdata())) if i != row)
                     self.filop(read)
                 else:
                     raise ValueError(f'The row {row} is not exist!')
@@ -258,7 +307,7 @@ class TreeView:
             if isinstance(words,str):
                 words = f'{" " * self.getchild(child)}-{words}\n' if child else f'{words}:\n'
                 if row <= self.getdatanum()-1:
-                    data = enumerate(tuple(self.getdata())) 
+                    data = iter(tuple(self.getdata())) 
                     self.filop(Gtv.insertr(words, data, row))
                 else:
                     raise ValueError('"row" need to be less or equal to {len(read)-1}')
@@ -279,7 +328,7 @@ class TreeView:
             data = None
             num = None
             if isinstance(row, int) and isinstance(to, int):
-                data = enumerate(tuple(self.getdata()))
+                data = iter(tuple(self.getdata()))
                 num = self.getdatanum()
                 if to >=  num and row < to:
                     self.filop(Gtv.movet(data, row, to, True))
@@ -304,7 +353,7 @@ class TreeView:
             data = None
             if (child := self.getchild(child)):
                 if row <= self.getdatanum()-1:
-                    data = enumerate(tuple(self.getdata()))
+                    data = iter(tuple(self.getdata()))
                     self.filop(Gtv.movec(data, row, child))
                 else:
                     raise IndexError('Not implemented index!')
@@ -320,10 +369,8 @@ class TreeView:
         Print out your TreeView in console.
         """
         
-        read = self.getdata()
-        for r in read:
+        for _, r in self.getdata():
             print(r, end = '')
-        del read
                     
     def fileread(self, file: Iterator) -> None:
         """
@@ -350,22 +397,25 @@ class TreeView:
                 with open(f'{self.filename}.txt', 'w') as wfile:
                     for f in file:
                         span, word = f
-                        if span == 'parent':
-                            if word[-2:] == ':\n' :
-                                wfile.write(f'{word}')
-                            else:
-                                wfile.write(f'{word}:\n')
-                        elif self.getchild(span):
-                            if  word[0] == '-' and word[-1] == '\n':
-                                wfile.write(f'{" " * self.getchild(span)}{word}')
-                            else:
-                                wfile.write(f'{" " * self.getchild(span)}-{word}\n')
-                        elif span == 'space':
-                            wfile.write('\n')
-                        del span, word, f
+                        if all(isinstance(s, str) for s in [span, word]):
+                            if span == 'parent':
+                                if word[-2:] == ':\n' :
+                                    wfile.write(f'{word}')
+                                else:
+                                    wfile.write(f'{word}:\n')
+                            elif self.getchild(span):
+                                if  word[0] == '-' and word[-1] == '\n':
+                                    wfile.write(f'{" " * self.getchild(span)}{word}')
+                                else:
+                                    wfile.write(f'{" " * self.getchild(span)}-{word}\n')
+                            elif span == 'space':
+                                wfile.write('\n')
+                            del span, word, f
+                        else:
+                            raise TypeError('Variables need to be string!')
             else:
-                raise TypeError('Unidentified file!!!')
-        except TypeError as e:
+                raise TypeError('File need to be an iterator!')
+        except Exception as e:
             raise e
         finally:
             del file
@@ -378,7 +428,7 @@ class TreeView:
         
         try:
             log = int(datetime.datetime.timestamp(datetime.datetime.now()))
-            do = iter({log: tuple(dict(self.insighttree()).values())}.items())
+            do = iter({log: tuple(self.compdatch(True))}.items())
             dbs = db(self.filename)
             if not os.path.exists(dbs.pname):
                 dbs.createdb(do)
@@ -432,7 +482,7 @@ class TreeView:
             stc = None
             if isinstance(row, int):
                 if row <= self.getdatanum()-1:
-                    data = enumerate(tuple(self.getdata()))
+                    data = iter(tuple(self.getdata()))
                     if self.loc == 'cp65001':  
                         stc = chr(10004)
                     else:
@@ -455,7 +505,7 @@ class TreeView:
         try:
             data = None
             if row <= self.getdatanum()-1:
-                data = enumerate(tuple(self.getdata()))
+                data = iter(tuple(self.getdata()))
                 self.filop(Gtv.gensp(data, row))
             else:
                 raise IndexError('Not implemented index!')
