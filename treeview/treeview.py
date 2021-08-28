@@ -104,7 +104,7 @@ class TreeView:
                 except Exception as e:
                     caperr = str(e)
                     raise e
-        except GeneratorExit:
+        except GeneratorExit as e:
             return 
         finally:
             file.close()
@@ -184,8 +184,10 @@ class TreeView:
                 else:
                     pos = re.match(r'\s+', d).span()[1]
                     idx = (pos // spc)
-                    di[i] = (tuple(islice(self.childs,idx - 1, idx))[0][0], 
-                             d[pos:])
+                    di[i] = (
+                        tuple(islice(self.childs,idx - 1, idx))[0][0], 
+                        d[pos:]
+                    )
             return (di:= iter(di.values()) if di else None)
         except Exception as e:
             raise e
@@ -207,8 +209,10 @@ class TreeView:
                 else:
                     pos = re.match(r'\s+', d).span()[1]
                     idx = (pos // spc)
-                    di[i] = (tuple(islice(self.childs,idx - 1, idx))[0][0], 
-                             d[pos:])
+                    di[i] = (
+                        tuple(islice(self.childs,idx - 1, idx))[0][0], 
+                        d[pos:]
+                    )
             return (di:= iter(di.items()) if di else None)
         except Exception as e:
             raise e
@@ -230,8 +234,10 @@ class TreeView:
                     else:
                         pos = re.match(r'\s+', d).span()[1]
                         idx = (pos // spc)
-                        di[i] = (tuple(islice(self.childs,idx - 1, idx))[0][0], 
-                                 d[pos:])
+                        di[i] = (
+                            tuple(islice(self.childs,idx - 1, idx))[0][0], 
+                            d[pos:]
+                        )
                 return (di:= iter(di.items()) if di else None)
             else:
                 raise TypeError('Must be list!')
@@ -430,8 +436,11 @@ class TreeView:
                     for n, d in self.getdata():
                         if n == row:
                             if d != '\n':
-                                match = re.match(r"\s+", d).span()[1]
-                                writer.send(f'{" " * child}{d[(match:=0 if not match else match):]}')
+                                match = re.match(r"\s+", d)
+                                if match:
+                                    writer.send(f'{" " * child}{d[match.span()[1]:]}')
+                                else:
+                                    writer.send(d)
                             else:
                                 writer.send(d)
                         else:
