@@ -104,7 +104,7 @@ class TreeView:
                 except Exception as e:
                     caperr = str(e)
                     raise e
-        except GeneratorExit as e:
+        except GeneratorExit:
             return 
         finally:
             file.close()
@@ -217,13 +217,13 @@ class TreeView:
         except Exception as e:
             raise e
             
-    def insighthidden(self, data: Iterator) -> Iterator:
+    def insighthidden(self, data: Union[Iterator, GeneratorType], dct: bool = True) -> Iterator:
         """
         This is for structuring hidden items to be displayed. 
         """
         
         try:
-            if isinstance(data, Iterator):
+            if isinstance(data, (Iterator, GeneratorType)):
                 di = {}
                 spc = self.gspc()
                 for i, d in data:
@@ -238,7 +238,10 @@ class TreeView:
                             tuple(islice(self.childs,idx - 1, idx))[0][0], 
                             d[pos:]
                         )
-                return (di:= iter(di.items()) if di else None)
+                if dct:
+                    return (di:= iter(di.items()) if di else None)
+                else:
+                    return (di:= iter(di.values()) if di else None)
             else:
                 raise TypeError('Must be list!')
         except Exception as e:
@@ -485,24 +488,25 @@ class TreeView:
         
         try:
             if isinstance(file, Iterator):
-                with open(f'{self.filename}.txt', 'w') as wfile:
-                    for span, word in file:
-                        if all(isinstance(s, str) for s in [span, word]):
-                            if span == 'parent':
-                                if word[-2:] == ':\n' :
-                                    wfile.write(f'{word}')
-                                else:
-                                    wfile.write(f'{word}:\n')
-                            elif self.getchild(span):
-                                if  word[0] == '-' and word[-1] == '\n':
-                                    wfile.write(f'{" " * self.getchild(span)}{word}')
-                                else:
-                                    wfile.write(f'{" " * self.getchild(span)}-{word}\n')
-                            elif span == 'space':
-                                wfile.write('\n')
-                            del span, word
-                        else:
-                            raise TypeError('Variables need to be string!')
+                writer = self.satofi()
+                for span, word in file:
+                    if all(isinstance(s, str) for s in [span, word]):
+                        if span == 'parent':
+                            if word[-2:] == ':\n' :
+                                writer.send(f'{word}')
+                            else:
+                                writer.send(f'{word}:\n')
+                        elif self.getchild(span):
+                            if  word[0] == '-' and word[-1] == '\n':
+                                writer.send(f'{" " * self.getchild(span)}{word}')
+                            else:
+                                writer.send(f'{" " * self.getchild(span)}-{word}\n')
+                        elif span == 'space':
+                            writer.send('\n')
+                        del span, word
+                    else:
+                        writer.throw(Exception, 'Unable to write file!')
+                writer.close()
             else:
                 raise TypeError('File need to be an iterator!')
         except Exception as e:
