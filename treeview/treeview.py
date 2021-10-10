@@ -4,13 +4,12 @@
 import datetime
 import os
 import re
-from .dbase import Datab as db
+from .dbase import Datab as db, primer
 from itertools import islice
 from typing import Union
 from types import GeneratorType
 import locale
 from collections.abc import Iterator
-from functools import wraps
 from .tvdescript import Parent, ChildsNum, FileName
 
 
@@ -23,16 +22,6 @@ def conftv(cls, childs = None, space = None):
         raise ValueError('Space is exceeding the limitation! (1 to 10 only)')
     return cls
 
-def primer(gfn):
-    """Wrapper for generator for priming first next"""
-    
-    @wraps(gfn)
-    def nexting(*args, **kwargs):
-        wr = gfn(*args, **kwargs)
-        next(wr)
-        return wr
-    return nexting
-    
 class TreeView:
     """
     This is a class of writing in txt file in treeview/outline mode.
@@ -110,12 +99,12 @@ class TreeView:
             file.close()
             if caperr is None:
                 if wr:
-                    with open(f'{self.filename}_', 'rb') as tf, \
-                         open(f'{self.filename}.txt', 'w') as rf:
+                    with (open(f'{self.filename}_', 'rb') as tf,
+                        open(f'{self.filename}.txt', 'w') as rf):
                         rf.write(tf.read().decode())
                 else:
-                    with open(f'{self.filename}_', 'rb') as tf, \
-                         open(f'{self.filename}.txt', 'a') as rf:
+                    with (open(f'{self.filename}_', 'rb') as tf,
+                        open(f'{self.filename}.txt', 'a') as rf):
                         rf.write(tf.read().decode())
             else:
                 del caperr

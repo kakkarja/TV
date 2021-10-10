@@ -7,6 +7,17 @@ import os
 from collections.abc import Iterator
 from types import GeneratorType
 from typing import Union, Any
+from functools import wraps
+
+def primer(gfn):
+    """Wrapper for generator for priming first next"""
+    
+    @wraps(gfn)
+    def nexting(*args, **kwargs):
+        wr = gfn(*args, **kwargs)
+        next(wr)
+        return wr
+    return nexting
 
 class Datab:
     """
@@ -26,7 +37,7 @@ class Datab:
     def __getattr__(self, name):
         if name == 'pname':
             return self.__path
-        raise AttributeError(f'"{name}" is not exist!')    
+        raise AttributeError(f'"{name}" is not exist!')
     
     def __repr__(self):
         return f'Datab(pname = {self.__path})'
@@ -38,7 +49,50 @@ class Datab:
             return True
         raise FileNotFoundError('File is not exist yet!')
         
+    def gdt(self):
+        """Get database"""
+        
+        with open(self.__path) as rdb:
+            jit = iter(json.load(rdb).items())
+        return jit
     
+    def wdt(self, data: Union[Iterator, GeneratorType]) -> None:
+        """Writing database"""
+        
+        try:
+            jit = None
+            if self.validate():
+                jit = self.gdt()
+                with open(self.__path, 'w') as dbj:
+                    json.dump(dict(jit)|dict(data), dbj)
+        except:
+            with open(self.__path, 'w') as dbj:
+                json.dump(dict(data), dbj)
+        finally:
+            del jit, data
+    
+    @primer
+    def comit(self):
+        """Generator writer for database"""
+        
+        try:
+            dt = {}
+            caperr = None
+            try:
+                while True:
+                    rcv = yield
+                    dt.update([rcv])
+            except Exception as e:
+                caperr = str(e)
+                raise e
+        finally:
+            if caperr is None:
+                with open(self.__path, 'w') as dbj:
+                    json.dump(dt, dbj)
+            else:
+                del caperr
+            del dt
+                
     def createdb(self, data: Union[Iterator, GeneratorType]) -> None:
         """Create first time database."""
         
@@ -46,8 +100,7 @@ class Datab:
             if isinstance(data, (Iterator, GeneratorType)):
                 try:
                     if not os.path.exists(self.__path):
-                        with open(self.__path, 'w') as dbj:
-                            json.dump(dict(data), dbj)
+                        self.wdt(data)
                     else:
                         raise FileExistsError('File already exist!')
                 except Exception as e:
@@ -63,71 +116,61 @@ class Datab:
         """Insert data to existing database."""
         
         try:
-            adb = None
             if isinstance(data, (Iterator, GeneratorType)):
                 if self.validate():
-                    with open(self.__path) as rdb:
-                        adb = iter(dict(json.load(rdb)).items())
-                    with open(self.__path, 'w') as dbj:
-                        json.dump(dict(adb) | dict(data), dbj)
+                    self.wdt(data)
             else:
                 raise TypeError('Must be Generator or iterator')
         except Exception as e:
             raise e
         finally:
-            del data, adb        
+            del data        
     
     def deldata(self, named: str) -> None:
         """Delete a data in existing database."""
         
         try:
-            adb = None
             if isinstance(named, str):
                 if self.validate():
-                    with open(self.__path) as rdb:
-                        adb = dict(json.load(rdb))
-                    if named in adb:
-                        del adb[named]
-                        with open(self.__path, 'w') as dbj:
-                            json.dump(adb, dbj)
-                    else:
-                        raise KeyError('Key not found in database!')
+                    writer = self.comit()
+                    for d in self.gdt():
+                        if d[0] != named:
+                            writer.send(d)
+                    writer.close()
             else:
                 raise TypeError('Must be str')
         except Exception as e:
             raise e
         finally:
-            del named, adb
+            del named
     
     def takedat(self, named: str) -> Any:
-        """Taking a data from database."""
+        """
+        Taking a data from database.
+        If value is a string,
+        it will return both key and value.
+        """
         
         try:
-            adb = None
             if isinstance(named, str):
-                if self.validate():
-                    with open(self.__path) as rdb:
-                        adb = dict(json.load(rdb))
-                    if named in adb:
-                        return adb[named]
-                    else:
-                        raise KeyError('Key not found in database!')
+                for d in self.gdt():
+                    if d[0] == named:
+                        if isinstance(d[1], str):
+                            return iter(d)
+                        return iter(d[1])
             else:
                 raise TypeError('Must be str')
         except Exception as e:
             raise e
         finally:
-            del named, adb
+            del named
             
     def totalrecs(self) -> int:
         """Return the total of records in database."""
         
         try:
-            adb = None
             if self.validate():
-                with open(self.__path) as rdb:
-                    adb = len(dict(json.load(rdb)))
-                return adb
+                return len(tuple(self.gdt()))
         except Exception as e:
             raise e
         
@@ -141,58 +184,25 @@ class Datab:
         """Load all database to dictionary's items."""
         
         try:
-            adb = None
             if self.validate():
-                with open(self.__path) as rdb:
-                    adb = dict(json.load(rdb)).items()
-                return adb
+                return iter(dict(self.gdt()).items())
         except Exception as e:
             raise e
-        finally:
-            del adb
             
     def loadkeys(self) -> 'dict_keys':
         """Load all database keys only."""
         
         try:
-            adb = None
             if self.validate():
-                with open(self.__path) as rdb:
-                    adb = dict(json.load(rdb)).keys()
-                return adb
+                return iter(dict(self.gdt()).keys())
         except Exception as e:
             raise e
-        finally:
-            del adb        
     
     def loadvalues(self) -> 'dict_values':
         """Load all database values only."""
         
         try:
-            adb = None
             if self.validate():
-                with open(self.__path) as rdb:
-                    adb = dict(json.load(rdb)).values()
-                return adb
+                return iter(dict(self.gdt()).values())
         except Exception as e:
             raise e
-        finally:
-            del adb         
-                
-if __name__ == '__main__':
-    #a = Datab(os.getcwd()+'\\Mantap')
-    #print(a.pname, repr(a), a)
-    a = Datab(os.path.join(os.getcwd(),'coba'))
-    
-    print(a)
-    a.createdb(iter({'mantaaap': 'keren'}.items()))
-    a.indata(iter({'keren': 'mantaaap'}.items()))
-    print(a.totalrecs())
-    print(list(a.loadall()))
-    print(list(a.loadkeys()))
-    print(list(a.loadvalues()))
-    print(a.takedat('keren'))
-    a.deldata('mantaaap')
-    print(a.loadall())
-    print(a.totalrecs())
-    a.deldb()
