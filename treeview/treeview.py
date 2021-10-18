@@ -265,9 +265,10 @@ class TreeView:
         """
         
         try:
+            torow = self.getdatanum()-1
             if isinstance(words, str):
                 words = f'{" " * self.getchild(child)}-{words}\n' if child else f'{words}:\n'
-                if isinstance(row, int) and self.getdatanum()-1 >= row >= 0 :
+                if isinstance(row, int) and torow >= row >= 0 :
                     writer = self.satofi()
                     for n, d in self.getdata():
                         if n != row:
@@ -280,13 +281,13 @@ class TreeView:
                                 writer.send(d)
                     writer.close()
                 else:
-                    raise ValueError(f'"row" must be int number and less or equal to {d-1}! (Not 0)')
+                    raise ValueError(f'"row" must be int number and less or equal to {torow}!')
             else:
                 raise TypeError('Must be string and file need to be exist!')
         except TypeError as e:
             raise e
         finally:
-            del words, row, child
+            del words, row, child, torow
             
     def addparent(self, words: str) -> None:
         """
