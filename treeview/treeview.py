@@ -13,8 +13,14 @@ from collections.abc import Iterator
 from .tvdescript import Parent, ChildsNum, FileName
 
 
-def conftv(cls, childs = None, space = None):
-    """Configure Childs with spaces limited from 1 to 10"""
+def conftv(cls, childs = 50, space = 4):
+    """
+    Configure Childs with spaces limited from 1 to 10
+    Default are childs = 50 and space = 4,
+    which unnecessary to overwrite same default.
+    Unless you want to change the default,
+    then this function is useful to overwrite the default. 
+    """
     
     if space and space <= 10:
         cls.childs = ChildsNum(childs, space)
