@@ -180,7 +180,7 @@ class Datab:
         if self.validate():
             os.remove(self.__path)
     
-    def loadall(self) -> 'dict_items':
+    def loadall(self) -> Any:
         """Load all database to dictionary's items."""
         
         try:
@@ -189,7 +189,7 @@ class Datab:
         except Exception as e:
             raise e
             
-    def loadkeys(self) -> 'dict_keys':
+    def loadkeys(self) -> Any:
         """Load all database keys only."""
         
         try:
@@ -198,7 +198,7 @@ class Datab:
         except Exception as e:
             raise e
     
-    def loadvalues(self) -> 'dict_values':
+    def loadvalues(self) -> Any:
         """Load all database values only."""
         
         try:
