@@ -1,1 +1,1 @@
-from .datab import Datab
+from .datab import Datab, primer
