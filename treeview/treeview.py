@@ -13,6 +13,9 @@ from collections.abc import Iterator
 from .tvdescript import Parent, ChildsNum, FileName
 
 
+__all__ = ("conftv", "TreeView")
+
+
 def conftv(cls, childs = 50, space = 4):
     """
     Configure Childs with spaces limited from 1 to 10
@@ -572,7 +575,7 @@ class TreeView:
             stc = None
             if isinstance(row, int):
                 if row <= self.getdatanum()-1:
-                    if self.loc == 'cp65001':  
+                    if self.loc.lower() in ("cp65001", "utf-8"):  
                         stc = chr(10004)
                     else:
                         stc = '«[DONE]»'

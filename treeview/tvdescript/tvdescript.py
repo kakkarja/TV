@@ -6,6 +6,10 @@ import weakref
 from types import GeneratorType
 from functools import wraps
 
+
+__all__ = ("ChildsNum", "Parent", "FileName", "configtv")
+
+
 class DescriptClasses(type):
     
     def __new__(cls, name, bases, cls_d):

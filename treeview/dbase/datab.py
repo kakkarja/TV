@@ -9,6 +9,10 @@ from types import GeneratorType
 from typing import Union, Any
 from functools import wraps
 
+
+__all__ = ("primer", "Datab")
+
+
 def primer(gfn):
     """Wrapper for generator for priming first next"""
     
